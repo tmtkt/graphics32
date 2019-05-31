@@ -582,6 +582,7 @@ type
   protected
     property UpdateCount: Integer read FUpdateCount;
   public
+    procedure BeforeDestruction; override;
     procedure Changed; virtual;
     procedure BeginUpdate; virtual;
     procedure EndUpdate; virtual;
@@ -2156,6 +2157,12 @@ end;
 
 { TNotifiablePersistent }
 
+procedure TNotifiablePersistent.Beforedestruction;
+begin
+  inherited;
+  inc(FUpdateCount);
+end;
+
 procedure TNotifiablePersistent.BeginUpdate;
 begin
   Inc(FUpdateCount);
@@ -2293,7 +2300,6 @@ end;
 
 destructor TCustomBitmap32.Destroy;
 begin
-  BeginUpdate;
   Lock;
   try
     SetSize(0, 0);
@@ -2662,10 +2668,10 @@ procedure TCustomBitmap32.Assign(Source: TPersistent);
 {$IFNDEF PLATFORM_INDEPENDENT}
     else if SrcGraphic is TMetaFile then
       AssignFromGraphicMasked(TargetBitmap, SrcGraphic)
-{$IFDEF COMPILER2005_UP}
+    {$IFDEF COMPILER2010_UP}
     else if SrcGraphic is TWICImage then
       AssignFromGraphicPlain(TargetBitmap, SrcGraphic, 0, False)
-{$ENDIF}
+    {$ENDIF}
 {$ENDIF}
     else
       AssignFromGraphicPlain(TargetBitmap, SrcGraphic, clWhite32, True);
