@@ -457,7 +457,7 @@ type
     property Centered: Boolean read FCentered write SetCentered default True;
     property ScrollBars: TIVScrollProperties read FScrollBars write SetScrollBars;
     property SizeGrip: TSizeGripStyle read FSizeGrip write SetSizeGrip default sgAuto;
-    property OverSize: Integer read FOverSize write SetOverSize;    
+    property OverSize: Integer read FOverSize write SetOverSize;
     property OnScroll: TNotifyEvent read FOnScroll write FOnScroll;
   end;
 
@@ -566,7 +566,8 @@ type
 implementation
 
 uses
-  Math, TypInfo, GR32_MicroTiles, GR32_Backends, GR32_XPThemes;
+  Math, TypInfo,
+  GR32_MicroTiles, GR32_Backends, GR32_XPThemes, GR32_Resamplers, GR32_Backends_Generic;
 
 type
   TLayerAccess = class(TCustomLayer);
@@ -2313,12 +2314,153 @@ begin
 end;
 
 procedure TCustomImgView32.Scroll(Dx, Dy: Integer);
+
+  procedure BufferRectToBitmap(var ARect: TRect);
+  begin
+    // Does pretty must the same as ControlToBitmap but for a rect instead of a point
+    if (CachedRecScaleX = 0) then
+    begin
+      ARect.Left := Low(ARect.Left);
+      ARect.Right := High(ARect.Right);
+    end else
+    begin
+      ARect.Left := Floor((ARect.Left - CachedShiftX) * CachedRecScaleX);
+      ARect.Right := Ceil((ARect.Right - CachedShiftX) * CachedRecScaleX);
+    end;
+
+    if (CachedRecScaleY = 0) then
+    begin
+      ARect.Top := Low(ARect.Top);
+      ARect.Bottom := High(ARect.Bottom);
+    end else
+    begin
+      ARect.Top := Floor((ARect.Top - CachedShiftY) * CachedRecScaleY);
+      ARect.Bottom := Ceil((ARect.Bottom - CachedShiftY) * CachedRecScaleY);
+    end;
+  end;
+
+var
+  OldRect, SourceRect, DestRect: TRect;
+  DeltaX, DeltaY: integer;
+  TempBitmap: TBitmap32;
+  VerticalRect, HorizontalRect: TRect;
 begin
-  DisableScrollUpdate := True;
-  HScroll.Position := HScroll.Position + Dx;
-  VScroll.Position := VScroll.Position + Dy;
-  DisableScrollUpdate := False;
-  UpdateImage;
+  if (Dx = 0) and (Dy = 0) then
+    Exit;
+
+  // Get position of bitmap before scroll
+  OldRect := GetBitmapRect;
+
+  if (RepaintMode <> rmFull) then
+    // Avoid having UpdateImage invalidate the buffer
+    BeginUpdate;
+  try
+
+    DisableScrollUpdate := True;
+    HScroll.Position := HScroll.Position + Dx;
+    VScroll.Position := VScroll.Position + Dy;
+    DisableScrollUpdate := False;
+    UpdateImage;
+
+  finally
+    if (RepaintMode <> rmFull) then
+      EndUpdate;
+  end;
+
+  if (RepaintMode <> rmFull) then
+  begin
+    {
+      Instead of invalidating the whole buffer and then resample everything
+      in order to redraw, we move the part of the buffer that remains
+      unchanged by the scoll and then only invalidate the parts that were
+      covered by the rect we moved but not covered by the rect we moved it to.
+    }
+
+    // Get new position of bitmap so we can calculate how much it was scrolled
+    SourceRect := GetBitmapRect;
+
+    // How many pixels, in bitmap coordinate space, did we pan?
+    DeltaX := SourceRect.Left - OldRect.Left;
+    DeltaY := SourceRect.Top - OldRect.Top;
+
+    // Find the rect that must be moved
+    SourceRect := TRect.Intersect(SourceRect, Buffer.BoundsRect);
+
+    // Find the rect it must be moved to
+    DestRect := SourceRect;
+    DestRect.Offset(DeltaX, DeltaY);
+
+    // Moved the area that was panned
+    if (DestRect.IntersectsWith(SourceRect)) then
+    begin
+      // BlockTransfer does not support overlapping source and dest so we must
+      // use a temporary buffer.
+      TempBitmap := TBitmap32.Create(TMemoryBackend);
+      try
+        TempBitmap.SetSize(SourceRect.Width, SourceRect.Height);
+        BlockTransfer(TempBitmap, 0, 0, TempBitmap.BoundsRect, Buffer, SourceRect, dmOpaque);
+        BlockTransfer(Buffer, DestRect.Left, DestRect.Right, DestRect, TempBitmap, TempBitmap.BoundsRect, dmOpaque);
+      finally
+        TempBitmap.Free;
+      end;
+    end else
+      Buffer.Draw(DestRect, SourceRect, Buffer);
+
+    // Make sure windows repaints the buffer area we just modified
+    InvalidateRect(Handle, DestRect, False);
+
+    {
+      Invalidate the buffer region that was occupied by the area we just moved
+      so the resampler will recreate it from the source bitmap.
+      The region consist of a vertical rect (caused by horizontal pan) and/or
+      a horizontal rect (caused by vertical pan).
+    }
+
+    // We perform the invalidation through the bitmap area change mechanism so
+    // we need to operate in the bitmap coordinate space.
+    UpdateCache;
+    BufferRectToBitmap(DestRect);
+    BufferRectToBitmap(SourceRect);
+
+    if (DeltaX < 0) then
+      VerticalRect := Rect(DestRect.Right, SourceRect.Top, SourceRect.Right, SourceRect.Bottom)
+    else
+    if (DeltaX > 0) then
+      VerticalRect := Rect(SourceRect.Left, SourceRect.Top, DestRect.Left, SourceRect.Bottom);
+
+    if (DeltaY < 0) then
+      HorizontalRect := Rect(SourceRect.Left, DestRect.Bottom, SourceRect.Right, SourceRect.Bottom)
+    else
+    if (DeltaY > 0) then
+      HorizontalRect := Rect(SourceRect.Left, SourceRect.Top, SourceRect.Right, DestRect.Top);
+
+    if (DeltaX <> 0) then
+      Bitmap.Changed(VerticalRect);
+
+    if (DeltaY <> 0) then
+    begin
+      if (DeltaX <> 0) then
+      begin
+        // If we both have a vertical and a horizontal rect then they will overlap.
+        // We remove the overlapping part since it has already been handled by the
+        // vertical case.
+        VerticalRect.Intersect(HorizontalRect);
+        if (VerticalRect.Left <> HorizontalRect.Left) then
+          HorizontalRect.Right := VerticalRect.Left
+        else
+          HorizontalRect.Left := VerticalRect.Right;
+      end;
+
+      Bitmap.Changed(HorizontalRect);
+    end;
+
+    // Mark buffer invalid to have the changes we just applied processed by
+    // the repaint routines and signal windows to redraw the control.
+    Invalidate;
+    // Invalidate sets CacheValid=False but we have already updated the cache
+    // so mark it valid again.
+    CacheValid := True;
+  end;
 end;
 
 procedure TCustomImgView32.ScrollHandler(Sender: TObject);
