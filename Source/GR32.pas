@@ -881,6 +881,12 @@ type
     procedure LineXSP(X1, Y1, X2, Y2: TFixed; L: Boolean = False); overload;
     procedure LineFSP(X1, Y1, X2, Y2: Single; L: Boolean = False); overload;
 
+    procedure HorzLineDot(X1, Y, X2: Integer; Value: TColor32);
+
+    procedure VertLineDot(X, Y1, Y2: Integer; Value: TColor32);
+
+    procedure LineDot(X1, Y1, X2, Y2: Integer; Value: TColor32; L: Boolean = False);
+
     property  PenColor: TColor32 read FPenColor write FPenColor;
     procedure MoveTo(X, Y: Integer);
     procedure LineToS(X, Y: Integer);
@@ -3730,7 +3736,6 @@ begin
 end;
 
 procedure TCustomBitmap32.HorzLineX(X1, Y, X2: TFixed; Value: TColor32);
-//Author: Michael Hansen
 var
   I: Integer;
   X1F, X2F, YF, Count: Integer;
@@ -3795,7 +3800,6 @@ begin
 end;
 
 procedure TCustomBitmap32.HorzLineXS(X1, Y, X2: TFixed; Value: TColor32);
-//author: Michael Hansen
 begin
   if X1 > X2 then
     Swap(X1, X2);
@@ -3945,7 +3949,6 @@ begin
 end;
 
 procedure TCustomBitmap32.VertLineX(X, Y1, Y2: TFixed; Value: TColor32);
-//Author: Michael Hansen
 var
   I: Integer;
   Y1F, Y2F, XF, Count: Integer;
@@ -4010,7 +4013,6 @@ begin
 end;
 
 procedure TCustomBitmap32.VertLineXS(X, Y1, Y2: TFixed; Value: TColor32);
-//author: Michael Hansen
 begin
   if Y1 > Y2 then
     Swap(Y1, Y2);
@@ -4938,6 +4940,272 @@ end;
 procedure TCustomBitmap32.LineFSP(X1, Y1, X2, Y2: Single; L: Boolean);
 begin
   LineXSP(Fixed(X1), Fixed(Y1), Fixed(X2), Fixed(Y2), L);
+end;
+
+procedure TCustomBitmap32.HorzLineDot(X1, Y, X2: Integer; Value: TColor32);
+var
+  X: Integer;
+begin
+  // TODO Optimmize this function. See LineDot.
+  if not FMeasuringMode then
+  begin
+    for X := X1 to X2 do
+      if (X - X1) mod 6 < 3 then
+        Bits[X + Y * Width] := Value;
+
+    for X := X1 downto X2 do
+      if (X1 - X) mod 6 < 3 then
+        Bits[X + Y * Width] := Value;
+  end;
+
+  Changed(MakeRect(X1, Y, X2+1, Y+1));
+end;
+
+procedure TCustomBitmap32.VertLineDot(X, Y1, Y2: Integer; Value: TColor32);
+var
+  Y: Integer;
+begin
+  // TODO Optimmize this function. See LineDot.
+  if not FMeasuringMode then
+  begin
+    for Y := Y1 to Y2 do
+      if (Y - Y1) mod 6 < 3 then
+        Bits[X + Y * Width] := Value;
+
+    for Y := Y1 downto Y2 do
+      if (Y1 - Y) mod 6 < 3 then
+        Bits[X + Y * Width] := Value;
+  end;
+
+  Changed(MakeRect(X, Y1, X+1, Y2+1));
+end;
+
+procedure TCustomBitmap32.LineDot(X1, Y1, X2, Y2: Integer; Value: TColor32; L: Boolean);
+var
+  Dy, Dx, Sy, Sx, I, Delta: Integer;
+  P: PColor32;
+begin
+  Dx := X2 - X1;
+  Dy := Y2 - Y1;
+
+  if Dx = 0 then
+  begin
+    if L then
+      VertLineDot(X1, Y1, Y2, Value)
+    else if Y1 < Y2 then
+      VertLineDot(X1, Y1, Y2 - 1, Value)
+    else
+      VertLineDot(X1, Y1, Y2 + 1, Value);
+    Exit;
+  end;
+
+  if Dy = 0 then
+  begin
+    if L then
+      HorzLineDot(X1, Y1, X2, Value)
+    else if X1 < X2 then
+      HorzLineDot(X1, Y1, X2 - 1, Value)
+    else
+      HorzLineDot(X1, Y1, X2 + 1, Value);
+    Exit;
+  end;
+
+  if not FMeasuringMode then
+  begin
+    Sx := 1;
+    if Dx < 0 then
+    begin
+      Dx := -Dx;
+      Sx := -1;
+    end;
+
+    Sy := 1;
+    if Dy < 0 then
+    begin
+      Dy := -Dy;
+      Sy := -1;
+    end;
+
+    P := PixelPtr[X1, Y1];
+    Sy := Sy * Width;
+
+    if Dx > Dy then
+    begin
+      Delta := Dx shr 1;
+
+      I := 0;
+
+      while I + 6 < Dx do
+      begin
+        P^ := Value;
+        Inc(P, Sx);
+        Inc(Delta, Dy);
+
+        if Delta >= Dx then
+        begin
+          Inc(P, Sy);
+          Dec(Delta, Dx);
+        end;
+
+        P^ := Value;
+        Inc(P, Sx);
+        Inc(Delta, Dy);
+
+        if Delta >= Dx then
+        begin
+          Inc(P, Sy);
+          Dec(Delta, Dx);
+        end;
+
+        P^ := Value;
+        Inc(P, Sx);
+        Inc(Delta, Dy);
+
+        if Delta >= Dx then
+        begin
+          Inc(P, Sy);
+          Dec(Delta, Dx);
+        end;
+
+        Inc(P, Sx);
+        Inc(Delta, Dy);
+
+        if Delta >= Dx then
+        begin
+          Inc(P, Sy);
+          Dec(Delta, Dx);
+        end;
+
+        Inc(P, Sx);
+        Inc(Delta, Dy);
+
+        if Delta >= Dx then
+        begin
+          Inc(P, Sy);
+          Dec(Delta, Dx);
+        end;
+
+        Inc(P, Sx);
+        Inc(Delta, Dy);
+
+        if Delta >= Dx then
+        begin
+          Inc(P, Sy);
+          Dec(Delta, Dx);
+        end;
+
+        Inc(I, 6);
+      end;
+
+      while I < Dx do
+      begin
+        if I mod 6 < 3 then
+          P^ := Value;
+        Inc(P, Sx);
+        Inc(Delta, Dy);
+
+        if Delta >= Dx then
+        begin
+          Inc(P, Sy);
+          Dec(Delta, Dx);
+        end;
+
+        Inc(I);
+      end;
+
+      if L and (I mod 6 < 3) then
+        P^ := Value;
+    end
+    else // Dx <= Dy
+    begin
+      Delta := Dy shr 1;
+
+      I := 0;
+
+      while I + 6 < Dy do
+      begin
+        P^ := Value;
+        Inc(P, Sy);
+        Inc(Delta, Dx);
+
+        if Delta >= Dy then
+        begin
+          Inc(P, Sx);
+          Dec(Delta, Dy);
+        end;
+
+        P^ := Value;
+        Inc(P, Sy);
+        Inc(Delta, Dx);
+
+        if Delta >= Dy then
+        begin
+          Inc(P, Sx);
+          Dec(Delta, Dy);
+        end;
+
+        P^ := Value;
+        Inc(P, Sy);
+        Inc(Delta, Dx);
+
+        if Delta >= Dy then
+        begin
+          Inc(P, Sx);
+          Dec(Delta, Dy);
+        end;
+
+        Inc(P, Sy);
+        Inc(Delta, Dx);
+
+        if Delta >= Dy then
+        begin
+          Inc(P, Sx);
+          Dec(Delta, Dy);
+        end;
+
+        Inc(P, Sy);
+        Inc(Delta, Dx);
+
+        if Delta >= Dy then
+        begin
+          Inc(P, Sx);
+          Dec(Delta, Dy);
+        end;
+
+        Inc(P, Sy);
+        Inc(Delta, Dx);
+
+        if Delta >= Dy then
+        begin
+          Inc(P, Sx);
+          Dec(Delta, Dy);
+        end;
+
+        Inc(I, 6);
+      end;
+
+      while I < Dy do
+      begin
+        if I mod 6 < 3 then
+          P^ := Value;
+        Inc(P, Sy);
+        Inc(Delta, Dx);
+
+        if Delta >= Dy then
+        begin
+          Inc(P, Sx);
+          Dec(Delta, Dy);
+        end;
+
+        Inc(I);
+      end;
+
+      if L and (I mod 6 < 3) then
+        P^ := Value;
+    end;
+  end;
+
+  Changed(MakeRect(X1, Y1, X2, Y2), AREAINFO_LINE + 1);
 end;
 
 procedure TCustomBitmap32.LineA(X1, Y1, X2, Y2: Integer; Value: TColor32; L: Boolean);
