@@ -7983,7 +7983,7 @@ begin
     lfCharSet := Byte(Font.Charset);
 
     if AnsiCompareText(Font.Name, 'Default') = 0 then  // do not localize
-      StrPLCopy(lfFaceName, DefFontData.Name, LF_FACESIZE-1)
+      StrPLCopy(lfFaceName, string(DefFontData.Name), LF_FACESIZE-1)
     else
       StrPLCopy(lfFaceName, Font.Name, LF_FACESIZE-1);
 
