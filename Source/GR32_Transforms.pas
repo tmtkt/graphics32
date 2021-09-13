@@ -1688,7 +1688,7 @@ end;
 procedure TRadialDistortionTransformation.PrepareReverseMap;
 var
 {$IFDEF DEBUG}
-  unset, interpolated, mapToSameIndex, IndexOutOfRange: Integer;
+  interpolated, unset, mapToSameIndex, IndexOutOfRange: Integer;
 {$ENDIF}
   i, j, jmax, LowerI, UpperI: Integer;
   r_src, r_tgt, LowerValue, UpperValue: TFloat;
@@ -1715,13 +1715,13 @@ begin
     if not InRange(i, 0, High(Map)) then
 {$IFDEF DEBUG}
     begin
-      Inc(IndexOutOfRange);
+      {$IFDEF DEBUG} Inc(IndexOutOfRange); {$ENDIF}
       //OutputDebugString(PChar(Format('PrepareReverseMap: i=%d out of range (0, MapElements=%d), r_tgt=%f', [ i, MapElements, r_tgt ])))
     end
     else
     if Map[i]<>-1 then
     begin
-      Inc(mapToSameIndex);
+      {$IFDEF DEBUG} Inc(mapToSameIndex); {$ENDIF}
       // OutputDebugString(PChar(Format('PrepareReverseMap: Map[i=%d] already has value %f (wanted to put %f there)', [ i, Map[i], r_tgt ])))
     end
     else
@@ -1759,9 +1759,7 @@ begin
           for j := LowerI+1 to UpperI-1 do
           begin
             Map[j] := LowerValue + (UpperValue-LowerValue) * (j-LowerI) / (UpperI - LowerI);
-{$IFDEF DEBUG}
-            Inc(interpolated);
-{$ENDIF}
+            {$IFDEF DEBUG} Inc(interpolated); {$ENDIF}
           end;
         end;
       end;
