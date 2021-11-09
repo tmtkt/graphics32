@@ -61,6 +61,7 @@ type
     procedure Ellipse_HandlesBackendBitsBeingNil;
     procedure Ellipse_InMeasuringModeDrawsNothing;
     procedure Ellipse_InMeasuringModeChangesBoundingRectangle;
+    procedure Ellipse_IgnoresEmptyEllipses;
 
     procedure EllipseT_WorksForArbitrarySizes;
     procedure EllipseT_CanBlendEllipses;
@@ -72,6 +73,7 @@ type
     procedure EllipseT_HandlesBackendBitsBeingNil;
     procedure EllipseT_InMeasuringModeDrawsNothing;
     procedure EllipseT_InMeasuringModeChangesBoundingRectangle;
+    procedure EllipseT_IgnoresEmptyEllipses;
 
     procedure EllipseS_WorksForArbitrarySizes;
     procedure EllipseS_ClipsEllipses;
@@ -875,6 +877,18 @@ begin
   CheckEquals(11, ChangeArea.Bottom);
 end;
 
+procedure TTestEllipse.Ellipse_IgnoresEmptyEllipses;
+begin
+  Want.SetSize(4, 4);
+  Have.SetSize(4, 4);
+
+  Have.Ellipse(2, 1, 2, 3, clRed32);
+  CheckBitmapsEqual(Want, Have);
+
+  Have.Ellipse(1, 2, 3, 2, clGreen32);
+  CheckBitmapsEqual(Want, Have);
+end;
+
 procedure TTestEllipse.EllipseT_WorksForArbitrarySizes;
 begin
   // The cmMerge mode makes the half-transparent red on black background appear fully red,
@@ -1030,6 +1044,18 @@ begin
   Have.EllipseT(3, 4, 13, 8, $00FF0000);
   Have.EndMeasuring;
   CheckEquals(2, ChangeCount); // Same as before.
+end;
+
+procedure TTestEllipse.EllipseT_IgnoresEmptyEllipses;
+begin
+  Want.SetSize(4, 4);
+  Have.SetSize(4, 4);
+
+  Have.EllipseT(2, 1, 2, 3, $80FF0000);
+  CheckBitmapsEqual(Want, Have);
+
+  Have.EllipseT(1, 2, 3, 2, $8000FF00);
+  CheckBitmapsEqual(Want, Have);
 end;
 
 procedure TTestEllipse.EllipseS_WorksForArbitrarySizes;

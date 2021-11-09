@@ -5701,6 +5701,9 @@ procedure TCustomBitmap32.Ellipse(X1, Y1, X2, Y2: Integer; Value: TColor32);
 var
   E: EllipseState;
 begin
+  if (X2 <= X1) or (Y2 <= Y1) then
+    Exit;
+
   if (not FMeasuringMode) and (FBits <> nil) then
   begin
     E.Setup(X1, Y1, X2, Y2);
@@ -5959,6 +5962,9 @@ var
   Alpha: Integer;
   E: EllipseState;
 begin
+  if (X2 <= X1) or (Y2 <= Y1) then
+    Exit;
+
   Alpha := Value shr 24;
 
   if Alpha = $FF then
