@@ -5,7 +5,8 @@ interface
 uses
   TestFrameWork, GR32;
 
-{$DEFINE RUN_BENCHMARKS}
+// {$DEFINE RUN_BENCHMARKS}
+// {$DEFINE COMPARE_TO_CANVAS32_ELLIPSE}
 
 type
   TTestEllipse = class(TTestCase)
@@ -102,25 +103,25 @@ type
     procedure EllipseTS_HasOverloadTakingRectangle;
     procedure EllipseTS_HandlesLargeEllipses;
 
-{$IFDEF RUN_BENCHMARKS} published {$ELSE} private {$ENDIF}
+{$IFDEF RUN_BENCHMARKS}
     procedure FillRect_Benchmark;
     procedure FillEllipse_Benchmark;
     procedure FillEllipseT_Benchmark;
     procedure FillEllipseS_Benchmark;
     procedure FillEllipseTS_Benchmark;
     procedure TCavas32_Ellipse_Benchmark;
-    procedure BenchmarkLargeFilledEllipse;
+    procedure LargeFilledEllipse_Benchmark;
 
     procedure Ellipse_Benchmark;
     procedure EllipseT_Benchmark;
     procedure EllipseS_Benchmark;
     procedure EllipseTS_Benchmark;
-
-  private
+{$ENDIF}
+{$IFDEF COMPARE_TO_CANVAS32_ELLIPSE}
     // This test case shows the difference between the TCanvas32.Ellipse version
     // (anti-aliased) and FillEllipse. Make it published to see the difference.
     procedure Compare_FillEllipse_And_TCanvas32_Ellipse;
-
+{$ENDIF}
   protected
     procedure SetUp; override;
     procedure TearDown; override;
@@ -1383,6 +1384,8 @@ begin
   CheckBitmapsEqual(Want, Have);
 end;
 
+{$IFDEF RUN_BENCHMARKS}
+
 procedure TTestEllipse.FillRect_Benchmark;
 var
   Watch: TStopwatch;
@@ -1542,7 +1545,7 @@ begin
   Fail(Format('TCavas32.Ellipse took %d ms', [Watch.ElapsedMilliseconds]));
 end;
 
-procedure TTestEllipse.BenchmarkLargeFilledEllipse;
+procedure TTestEllipse.LargeFilledEllipse_Benchmark;
 var
   Watch: TStopwatch;
 begin
@@ -1665,6 +1668,8 @@ begin
   Have.SaveToFile('EllipseTS_Benchmark.bmp');
   Fail(Format('EllipseTS took %d ms', [Watch.ElapsedMilliseconds]));
 end;
+{$ENDIF}
+{$IFDEF COMPARE_TO_CANVAS32_ELLIPSE}
 
 procedure TTestEllipse.Compare_FillEllipse_And_TCanvas32_Ellipse;
 var
@@ -1683,6 +1688,7 @@ begin
 
   CheckBitmapsEqual(Want, Have);
 end;
+{$ENDIF}
 
 initialization
 
