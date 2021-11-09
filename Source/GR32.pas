@@ -6227,6 +6227,9 @@ var
   E: FillEllipseState;
   P: PColor32Array;
 begin
+  if (X2 <= X1) or (Y2 <= Y1) then
+    Exit;
+
   if (not FMeasuringMode) and (FBits <> nil) then
   begin
     E.Setup(X1, Y1, X2, Y2);
@@ -6355,6 +6358,9 @@ var
   P: PColor32;
   I: Integer;
 begin
+  if (X2 <= X1) or (Y2 <= Y1) then
+    Exit;
+
   Alpha := Value shr 24;
 
   if Alpha = $FF then

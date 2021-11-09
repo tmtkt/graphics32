@@ -16,6 +16,7 @@ type
     procedure FillEllipse_InMeasuringModeDrawsNothing;
     procedure FillEllipse_InMeasuringModeChangesBoundingRectangle;
     procedure FillEllipse_HandlesLargeEllipses;
+    procedure FillEllipse_IgnoresEmptyEllipses;
 
     procedure FillEllipseT_WorksForArbitrarySizes;
     procedure FillEllipseT_CanBlendEllipses;
@@ -28,6 +29,7 @@ type
     procedure FillEllipseT_InMeasuringModeDrawsNothing;
     procedure FillEllipseT_InMeasuringModeChangesBoundingRectangle;
     procedure FillEllipseT_HandlesLargeEllipses;
+    procedure FillEllipseT_IgnoresEmptyEllipses;
 
     procedure FillEllipseS_WorksForArbitrarySizes;
     procedure FillEllipseS_ClipsEllipses;
@@ -327,6 +329,18 @@ begin
   CheckEquals(clRed32, Have.Pixel[2000, 2000]);
 end;
 
+procedure TTestEllipse.FillEllipse_IgnoresEmptyEllipses;
+begin
+  Want.SetSize(4, 4);
+  Have.SetSize(4, 4);
+
+  Have.FillEllipse(2, 1, 2, 3, clRed32);
+  CheckBitmapsEqual(Want, Have);
+
+  Have.FillEllipse(1, 2, 3, 2, clGreen32);
+  CheckBitmapsEqual(Want, Have);
+end;
+
 procedure TTestEllipse.FillEllipseT_WorksForArbitrarySizes;
 begin
   // The cmMerge mode makes the half-transparent red on black background appear fully red,
@@ -494,6 +508,18 @@ begin
   // squares) the ellipse would only draw the top and bottom parts, the center line would
   // be missing. Thus we assure that the center contains a pixel of the ellipse.
   CheckEquals($80FF0000, Have.Pixel[2000, 2000]);
+end;
+
+procedure TTestEllipse.FillEllipseT_IgnoresEmptyEllipses;
+begin
+  Want.SetSize(4, 4);
+  Have.SetSize(4, 4);
+
+  Have.FillEllipseT(2, 1, 2, 3, $80FF0000);
+  CheckBitmapsEqual(Want, Have);
+
+  Have.FillEllipseT(1, 2, 3, 2, $8000FF00);
+  CheckBitmapsEqual(Want, Have);
 end;
 
 procedure TTestEllipse.FillEllipseS_WorksForArbitrarySizes;
