@@ -58,9 +58,9 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
-        <DCC_DcpOutput>..\..\..</DCC_DcpOutput>
-        <DCC_BplOutput>..\..\..</DCC_BplOutput>
-        <DCC_DcuOutput>..\..\..</DCC_DcuOutput>
+        <DCC_DcpOutput>..\..\..\..</DCC_DcpOutput>
+        <DCC_BplOutput>..\..\..\..</DCC_BplOutput>
+        <DCC_DcuOutput>..\..\..\..</DCC_DcuOutput>
         <DCC_K>false</DCC_K>
         <DCC_S>false</DCC_S>
         <GenDll>true</GenDll>
