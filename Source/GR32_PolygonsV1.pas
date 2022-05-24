@@ -224,8 +224,10 @@ type
 
   TEdgePoint = Integer;
 
-  PEdgePoints = ^TEdgePoints;
-  TEdgePoints = array [0..MaxListSize-1] of TEdgePoint;
+  PEdgePoints = ^TEdgePoints_;
+  // TEdgePoints_ is only declared to be able to declare PEdgePoints. No array of this
+  // length will really be created.
+  TEdgePoints_ = array [0..MaxInt div 16-1] of TEdgePoint;
 
   PScanLine = ^TScanLine;
   TScanLine = record
